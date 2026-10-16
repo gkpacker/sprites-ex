@@ -16,6 +16,10 @@ defmodule Sprites.Command do
 
     * **Direct mode** (default) — opens a new WebSocket per command to `/exec`
     * **Control mode** — multiplexes over a persistent WebSocket to `/control`
+
+  Both modes accept the same exec options (see `Sprites.spawn/4`), including
+  `:max_run_after_disconnect`, a duration string such as `"10s"` that limits how
+  long the command keeps running after the client disconnects.
   """
 
   use GenServer
@@ -188,6 +192,7 @@ defmodule Sprites.Command do
     |> put_control_dir(opts)
     |> put_control_env(opts)
     |> put_control_tty(opts)
+    |> put_control_max_run_after_disconnect(opts)
     |> Map.put("stdin", if(stdin, do: "true", else: "false"))
   end
 
@@ -216,6 +221,13 @@ defmodule Sprites.Command do
       |> Map.put("cols", to_string(cols))
     else
       control_args
+    end
+  end
+
+  defp put_control_max_run_after_disconnect(control_args, opts) do
+    case Sprite.max_run_after_disconnect(opts) do
+      nil -> control_args
+      duration -> Map.put(control_args, "max_run_after_disconnect", duration)
     end
   end
 

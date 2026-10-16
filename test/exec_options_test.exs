@@ -1,6 +1,10 @@
 defmodule Sprites.ExecOptionsTest do
   use Sprites.Test.ExecCase, async: true
 
+  import ExUnit.CaptureLog
+
+  alias Sprites.{Client, Sprite}
+
   describe "Sprite.exec_url/4" do
     test "builds the spawn URL with command and default params" do
       assert exec_url("echo", ["hi"], []) ==
@@ -94,7 +98,64 @@ defmodule Sprites.ExecOptionsTest do
     test "Sprites.cmd/4 returns output and exit code from the exec stream" do
       sprite = fake_sprite(frames: [<<1, "hello">>, <<3, 7>>])
 
-      assert Sprites.cmd(sprite, "echo", ["hello"]) == {"hello", 7}
+      assert Sprites.cmd(sprite, "echo", ["hello"], max_run_after_disconnect: "10s") ==
+               {"hello", 7}
+
+      assert_receive {:ws_request, _path, %{"max_run_after_disconnect" => "10s"}}
+    end
+  end
+
+  describe "max_run_after_disconnect" do
+    test "is returned when it is a string and nil when unset" do
+      assert Sprite.max_run_after_disconnect(max_run_after_disconnect: "10s") == "10s"
+      assert Sprite.max_run_after_disconnect([]) == nil
+    end
+
+    test "raises ArgumentError for non-string values" do
+      assert_raise ArgumentError, ~r/duration string/, fn ->
+        Sprite.max_run_after_disconnect(max_run_after_disconnect: 10_000)
+      end
+    end
+
+    test "is sent on direct-mode spawn when set" do
+      {_path, query} =
+        direct_request(&Sprites.spawn(&1, "bash", [], tty: true, max_run_after_disconnect: "10s"))
+
+      assert query["max_run_after_disconnect"] == "10s"
+    end
+
+    test "is not sent on direct-mode spawn when unset" do
+      {_path, query} = direct_request(&Sprites.spawn(&1, "bash", [], tty: true))
+
+      refute Map.has_key?(query, "max_run_after_disconnect")
+    end
+
+    test "is not sent when attaching to a session" do
+      {_path, query} =
+        direct_request(&Sprites.attach_session(&1, "abc", max_run_after_disconnect: "10s"))
+
+      refute Map.has_key?(query, "max_run_after_disconnect")
+    end
+
+    test "is sent in control-mode args when set" do
+      args = control_op_args("bash", [], max_run_after_disconnect: "10s")
+
+      assert args["max_run_after_disconnect"] == "10s"
+    end
+
+    test "is not sent in control-mode args when unset" do
+      refute Map.has_key?(control_op_args("bash", [], []), "max_run_after_disconnect")
+    end
+
+    test "makes spawn fail for non-string values in both modes" do
+      direct = Sprite.new(Client.new("test-token"), "my-sprite")
+
+      capture_log(fn ->
+        for sprite <- [direct, fake_sprite(control: true)] do
+          assert {:error, {%ArgumentError{}, _stacktrace}} =
+                   Sprites.spawn(sprite, "bash", [], max_run_after_disconnect: 10_000)
+        end
+      end)
     end
   end
 end
