@@ -40,9 +40,16 @@ defmodule Sprites.Command do
 
   @doc """
   Starts a command asynchronously.
+
+  Raises `ArgumentError` if `:max_run_after_disconnect` is not a duration string.
   """
   @spec start(Sprite.t(), String.t(), [String.t()], keyword()) :: {:ok, t()} | {:error, term()}
   def start(sprite, command, args, opts \\ []) do
+    # Validate up front so bad options raise in the caller instead of crashing
+    # the command process (which in control mode would leak a checked-out
+    # connection).
+    _ = Sprite.max_run_after_disconnect(opts)
+
     owner = Keyword.get(opts, :owner, self())
     tty_mode = Keyword.get(opts, :tty, false)
 

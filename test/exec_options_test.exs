@@ -1,8 +1,6 @@
 defmodule Sprites.ExecOptionsTest do
   use Sprites.Test.ExecCase, async: true
 
-  import ExUnit.CaptureLog
-
   alias Sprites.{Client, Sprite}
 
   describe "Sprite.exec_url/4" do
@@ -147,15 +145,17 @@ defmodule Sprites.ExecOptionsTest do
       refute Map.has_key?(control_op_args("bash", [], []), "max_run_after_disconnect")
     end
 
-    test "makes spawn fail for non-string values in both modes" do
+    test "raises in the caller for non-string values before connecting" do
       direct = Sprite.new(Client.new("test-token"), "my-sprite")
 
-      capture_log(fn ->
-        for sprite <- [direct, fake_sprite(control: true)] do
-          assert {:error, {%ArgumentError{}, _stacktrace}} =
-                   Sprites.spawn(sprite, "bash", [], max_run_after_disconnect: 10_000)
+      for sprite <- [direct, fake_sprite(control: true)] do
+        assert_raise ArgumentError, ~r/duration string/, fn ->
+          Sprites.spawn(sprite, "bash", [], max_run_after_disconnect: 10_000)
         end
-      end)
+      end
+
+      # Neither transport was contacted
+      refute_receive {:ws_request, _, _}
     end
   end
 end
