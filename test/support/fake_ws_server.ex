@@ -70,7 +70,7 @@ defmodule Sprites.Test.FakeWsServer do
       upgrade(socket, headers, state.owner)
 
       for frame <- state.frames,
-          do: :ok = :gen_tcp.send(socket, [<<0x82, byte_size(frame)>>, frame])
+          do: :ok = :gen_tcp.send(socket, [<<0x82>>, encode_length(byte_size(frame)), frame])
 
       {:noreply, handle_frames(Map.put(%{state | buffer: rest}, :upgraded, true))}
     else
@@ -130,6 +130,11 @@ defmodule Sprites.Test.FakeWsServer do
   defp payload_length(127, <<len::64, rest::binary>>), do: {:ok, len, rest}
   defp payload_length(len, rest) when len < 126, do: {:ok, len, rest}
   defp payload_length(_, _), do: :incomplete
+
+  # Server frames are unmasked; lengths use the short/16-bit/64-bit forms.
+  defp encode_length(len) when len < 126, do: <<0::1, len::7>>
+  defp encode_length(len) when len < 65_536, do: <<0::1, 126::7, len::16>>
+  defp encode_length(len), do: <<0::1, 127::7, len::64>>
 
   defp opcode_name(1), do: :text
   defp opcode_name(2), do: :binary

@@ -36,10 +36,15 @@ defmodule Sprites.Test.FakeWsServerTest do
   end
 
   test "sends configured binary frames to the client" do
-    server = start_supervised!({FakeWsServer, owner: self(), frames: [<<1, "out">>, <<3, 2>>]})
+    # 126+ and 65536+ bytes exercise the 16-bit and 64-bit length headers
+    medium = <<1, String.duplicate("m", 300)::binary>>
+    large = <<1, String.duplicate("l", 70_000)::binary>>
+    frames = [<<1, "out">>, medium, large, <<3, 2>>]
+    server = start_supervised!({FakeWsServer, owner: self(), frames: frames})
     {conn, stream} = connect(server, "/")
 
-    assert_receive {:gun_ws, ^conn, ^stream, {:binary, <<1, "out">>}}, 1_000
-    assert_receive {:gun_ws, ^conn, ^stream, {:binary, <<3, 2>>}}, 1_000
+    for frame <- frames do
+      assert_receive {:gun_ws, ^conn, ^stream, {:binary, ^frame}}, 1_000
+    end
   end
 end
