@@ -184,38 +184,39 @@ defmodule Sprites.Command do
   end
 
   defp build_control_args(command, args, opts, stdin) do
-    control_args = %{"cmd" => [command | args]}
+    %{"cmd" => [command | args]}
+    |> put_control_dir(opts)
+    |> put_control_env(opts)
+    |> put_control_tty(opts)
+    |> Map.put("stdin", if(stdin, do: "true", else: "false"))
+  end
 
-    control_args =
-      case Keyword.get(opts, :dir) do
-        nil -> control_args
-        dir -> Map.put(control_args, "dir", dir)
-      end
+  defp put_control_dir(control_args, opts) do
+    case Keyword.get(opts, :dir) do
+      nil -> control_args
+      dir -> Map.put(control_args, "dir", dir)
+    end
+  end
 
-    control_args =
-      case Keyword.get(opts, :env, []) do
-        [] ->
-          control_args
+  defp put_control_env(control_args, opts) do
+    case Keyword.get(opts, :env, []) do
+      [] -> control_args
+      env_list -> Map.put(control_args, "env", Enum.map(env_list, fn {k, v} -> "#{k}=#{v}" end))
+    end
+  end
 
-        env_list ->
-          env_strs = Enum.map(env_list, fn {k, v} -> "#{k}=#{v}" end)
-          Map.put(control_args, "env", env_strs)
-      end
+  defp put_control_tty(control_args, opts) do
+    if Keyword.get(opts, :tty, false) do
+      rows = Keyword.get(opts, :tty_rows, 24)
+      cols = Keyword.get(opts, :tty_cols, 80)
 
-    control_args =
-      if Keyword.get(opts, :tty, false) do
-        rows = Keyword.get(opts, :tty_rows, 24)
-        cols = Keyword.get(opts, :tty_cols, 80)
-
-        control_args
-        |> Map.put("tty", "true")
-        |> Map.put("rows", to_string(rows))
-        |> Map.put("cols", to_string(cols))
-      else
-        control_args
-      end
-
-    Map.put(control_args, "stdin", if(stdin, do: "true", else: "false"))
+      control_args
+      |> Map.put("tty", "true")
+      |> Map.put("rows", to_string(rows))
+      |> Map.put("cols", to_string(cols))
+    else
+      control_args
+    end
   end
 
   defp do_direct_init(sprite, command, args, opts, token, state) do
