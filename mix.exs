@@ -33,9 +33,9 @@ defmodule Sprites.MixProject do
   defp deps do
     [
       {:req, "~> 0.5"},
-      {:gun, "~> 2.1"},
-      # Cowlib 2.20 requires OTP 27; keep compatibility with Elixir 1.15 / OTP 26.
-      {:cowlib, "~> 2.19.0"},
+      {:gun, "~> 2.7"},
+      # Cowlib < 2.21 has CVE-2026-43966, CVE-2026-43969 and CVE-2026-43971; 2.20+ requires OTP 27.
+      {:cowlib, "~> 2.21"},
       {:jason, "~> 1.4"},
       {:client_signals, "~> 0.4.4"},
       {:plug, "~> 1.0", only: :test},
