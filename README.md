@@ -106,10 +106,10 @@ Sprites.resize(command, 40, 120)
 
 #### Running after disconnect
 
-Commands keep running on the sprite after the client disconnects. Pass
-`max_run_after_disconnect` (a duration string such as `"10s"` or `"5m"`) to
-`Sprites.spawn/4` or `Sprites.cmd/4` to stop the command that long after the
-connection drops:
+Commands keep running on the sprite after the client disconnects: by default
+non-TTY commands are stopped 10 seconds later, while TTY commands run with no
+time limit. Pass `max_run_after_disconnect` (a duration string such as `"10s"`
+or `"5m"`) to `Sprites.spawn/4` or `Sprites.cmd/4` to control that timeout:
 
 ```elixir
 {:ok, command} = Sprites.spawn(sprite, "bash", [], tty: true, max_run_after_disconnect: "10s")

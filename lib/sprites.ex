@@ -115,8 +115,10 @@ defmodule Sprites do
     * `:tty_cols` - TTY columns (default: 80)
     * `:max_run_after_disconnect` - How long the command may keep running
       after the client disconnects, as a duration string such as `"10s"` or
-      `"5m"`. When omitted, the command keeps running after disconnect with
-      no time limit. Ignored when attaching to an existing session.
+      `"5m"`. When omitted, the server default applies: non-TTY commands (the
+      default) are stopped 10 seconds after disconnect, while TTY commands
+      keep running with no time limit. Ignored when attaching to an existing
+      session.
 
   ## Examples
 
@@ -149,8 +151,10 @@ defmodule Sprites do
     * `:tty_cols` - TTY columns (default: 80)
     * `:max_run_after_disconnect` - How long the command may keep running
       after the client disconnects, as a duration string such as `"10s"` or
-      `"5m"`. When omitted, the command keeps running after disconnect with
-      no time limit. Ignored when attaching to an existing session.
+      `"5m"`. When omitted, the server default applies: non-TTY commands (the
+      default) are stopped 10 seconds after disconnect, while TTY commands
+      keep running with no time limit. Ignored when attaching to an existing
+      session.
     * `:session_info` - Report provider session identity to the owner as
       `{:session_info, %{ref: ref}, session_id}` (default: false). The ID is a
       string. Missing metadata yields no identity; it is never inferred from
