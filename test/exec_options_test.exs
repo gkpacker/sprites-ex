@@ -109,9 +109,24 @@ defmodule Sprites.ExecOptionsTest do
       assert Sprite.max_run_after_disconnect([]) == nil
     end
 
+    test "accepts Go duration syntax" do
+      for duration <- ~w(10s 5m 1h30m 1.5s .5s 500ms 0 0s) do
+        assert Sprite.max_run_after_disconnect(max_run_after_disconnect: duration) == duration
+      end
+    end
+
     test "raises ArgumentError for non-string values" do
       assert_raise ArgumentError, ~r/duration string/, fn ->
         Sprite.max_run_after_disconnect(max_run_after_disconnect: 10_000)
+      end
+    end
+
+    test "raises ArgumentError for malformed duration strings" do
+      # The server ignores unparseable values, which would disable the timeout.
+      for duration <- ["10", "1d", "garbage", "", "-10s", " 10s", "10s ", "s", "1.s5"] do
+        assert_raise ArgumentError, ~r/duration string/, fn ->
+          Sprite.max_run_after_disconnect(max_run_after_disconnect: duration)
+        end
       end
     end
 
@@ -145,12 +160,16 @@ defmodule Sprites.ExecOptionsTest do
       refute Map.has_key?(control_op_args("bash", [], []), "max_run_after_disconnect")
     end
 
-    test "raises in the caller for non-string values before connecting" do
+    test "raises in the caller for invalid values before connecting" do
       direct = Sprite.new(Client.new("test-token"), "my-sprite")
 
       for sprite <- [direct, fake_sprite(control: true)] do
         assert_raise ArgumentError, ~r/duration string/, fn ->
           Sprites.spawn(sprite, "bash", [], max_run_after_disconnect: 10_000)
+        end
+
+        assert_raise ArgumentError, ~r/duration string/, fn ->
+          Sprites.spawn(sprite, "bash", [], max_run_after_disconnect: "1d")
         end
       end
 
